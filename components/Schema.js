@@ -4,19 +4,19 @@ import { Header, TableHead, TableRow } from './common';
 
 import { SchemaHelpers } from '../helpers/schema';
 
-export function Schema({ schema, schemaName, hideTitle = false }) {
+export function Schema({ schema, schemaName, hideTitle = false, flattenPayload = false}) {
   const headers = ['Name', 'Type', 'Description', 'Value', 'Constraints', 'Notes'];
   return (
     <Text>
       {schemaName && hideTitle === false ? <Header type={4}>{schemaName}</Header> : null}
       <TableHead headers={headers} />
-      <SchemaPropRow schema={schema} path='' nameNote='root' />
-      <SchemaContent schema={schema} schemaName='' />
+      <SchemaPropRow schema={schema} path='' nameNote='root' flattenPayload={flattenPayload} c/>
+      <SchemaContent schema={schema} schemaName='' flattenPayload={flattenPayload} />
     </Text>
   );
 }
 
-function SchemaContent({ schema, schemaName, path = '' }) {
+function SchemaContent({ schema, schemaName, path = '', flattenPayload}) {
   const dependentSchemas = SchemaHelpers.getDependentSchemas(schema);
   const extensions = SchemaHelpers.getCustomExtensions(schema);
   const extensionsSchema = (extensions || Object.keys(extensions).length)
@@ -25,51 +25,51 @@ function SchemaContent({ schema, schemaName, path = '' }) {
 
   return (
     <>
-      <SchemaProperties schema={schema} schemaName={schemaName} path={path} />
-      <SchemaItems schema={schema} schemaName={schemaName} path={path} />
+      <SchemaProperties schema={schema} schemaName={schemaName} path={path} flattenPayload={flattenPayload} />
+      <SchemaItems schema={schema} schemaName={schemaName} path={path} flattenPayload={flattenPayload} />
 
       {schema.oneOf() && schema.oneOf().map((s, idx) => (
-        <SchemaPropRow schema={s} schemaName={idx} path={buildPath(path || schemaName, idx)} nameNote='oneOf item' key={idx} />
+        <SchemaPropRow schema={s} schemaName={idx} path={buildPath(path || schemaName, idx)} nameNote='oneOf item' key={idx} flattenPayload={flattenPayload} />
       ))}
-      {schema.anyOf() && schema.anyOf().map((s, idx) => (
-        <SchemaPropRow schema={s} schemaName={idx} path={buildPath(path || schemaName, idx)} nameNote='anyOf item' key={idx} />
+      {schema.anyOf() && (flattenPayload === false) && schema.anyOf().map((s, idx) => (
+        <SchemaPropRow schema={s} schemaName={idx} path={buildPath(path || schemaName, idx)} nameNote='anyOf item' key={idx} flattenPayload={flattenPayload} />
       ))}
-      {schema.allOf() && schema.allOf().map((s, idx) => (
-        <SchemaPropRow schema={s} schemaName={idx} path={buildPath(path || schemaName, idx)} nameNote='allOf item' key={idx} />
+      {schema.allOf() && (flattenPayload === false) && schema.allOf().map((s, idx) => (
+        <SchemaPropRow schema={s} schemaName={idx} path={buildPath(path || schemaName, idx)} nameNote='allOf item' key={idx} flattenPayload={flattenPayload} />
       ))}
       {schema.not() && (
-        <SchemaPropRow schema={schema.not()} path={path} nameNote='not' tryRenderAdditionalNotes={false} />
+        <SchemaPropRow schema={schema.not()} path={path} nameNote='not' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
       )}
       {schema.propertyNames() && (
-        <SchemaPropRow schema={schema.propertyNames()} path={path} nameNote='property names' tryRenderAdditionalNotes={false} />
+        <SchemaPropRow schema={schema.propertyNames()} path={path} nameNote='property names' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
       )}
       {schema.contains() && (
-        <SchemaPropRow schema={schema.contains()} path={path} nameNote='contains' tryRenderAdditionalNotes={false} />
+        <SchemaPropRow schema={schema.contains()} path={path} nameNote='contains' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
       )}
       {schema.if() && (
-        <SchemaPropRow schema={schema.if()} path={path} nameNote='if' tryRenderAdditionalNotes={false} />
+        <SchemaPropRow schema={schema.if()} path={path} nameNote='if' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
       )}
       {schema.then() && (
-        <SchemaPropRow schema={schema.then()} path={path} nameNote='then' tryRenderAdditionalNotes={false} />
+        <SchemaPropRow schema={schema.then()} path={path} nameNote='then' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
       )}
       {schema.else() && (
-        <SchemaPropRow schema={schema.else()} path={path} nameNote='else' tryRenderAdditionalNotes={false} />
+        <SchemaPropRow schema={schema.else()} path={path} nameNote='else' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
       )}
       {dependentSchemas && (
-        <SchemaPropRow schema={dependentSchemas} path={path} nameNote='dependant schemas' />
+        <SchemaPropRow schema={dependentSchemas} path={path} nameNote='dependant schemas' flattenPayload={flattenPayload} />
       )}
 
       {extensionsSchema && (
-        <SchemaProperties schema={extensionsSchema} path={path} />
+        <SchemaProperties schema={extensionsSchema} path={path} flattenPayload={flattenPayload} />
       )}
 
-      <SchemaAdditionalProperties schema={schema} path={path} />
-      <SchemaAdditionalItems schema={schema} path={path} />
+      <SchemaAdditionalProperties schema={schema} path={path} flattenPayload={flattenPayload} />
+      <SchemaAdditionalItems schema={schema} path={path} flattenPayload={flattenPayload} />
     </>
   );
 }
 
-function SchemaProperties({ schema, schemaName, path }) {
+function SchemaProperties({ schema, schemaName, path, flattenPayload}) {
   const properties = schema.properties() || {};
   if (!Object.keys(properties)) {
     return null;
@@ -91,6 +91,7 @@ function SchemaProperties({ schema, schemaName, path }) {
             schema,
           )}
           key={propertyName}
+          flattenPayload={flattenPayload}
         />
       ))}
       {Object.entries(patternProperties).map(([propertyName, property]) => (
@@ -100,13 +101,14 @@ function SchemaProperties({ schema, schemaName, path }) {
           path={buildPath(path || schemaName, propertyName)}
           nameNote='pattern property'
           key={propertyName}
+          flattenPayload={flattenPayload}
         />
       ))}
     </>
   );
 }
 
-function SchemaAdditionalProperties({ schema, path }) {
+function SchemaAdditionalProperties({ schema, path, flattenPayload}) {
   if (schema.ext(SchemaHelpers.extRenderAdditionalInfo) === false) {
     return null;
   }
@@ -123,11 +125,11 @@ function SchemaAdditionalProperties({ schema, path }) {
   }
 
   return (
-    <SchemaPropRow schema={additionalProperties} path={path} nameNote='additional properties' tryRenderAdditionalNotes={false} />
+    <SchemaPropRow schema={additionalProperties} path={path} nameNote='additional properties' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
   );
 }
 
-function SchemaItems({ schema, schemaName, path }) {
+function SchemaItems({ schema, schemaName, path, flattenPayload}) {
   const type = schema.type();
   const types = Array.isArray(type) ? type : [type];
   if (type !== undefined && !types.includes('array')) {
@@ -142,7 +144,7 @@ function SchemaItems({ schema, schemaName, path }) {
     Object.keys(items.properties() || {}).length
   ) {
     return (
-      <SchemaProperties schema={items} path={path} nameNote='single item' />
+      <SchemaProperties schema={items} path={path} nameNote='single item' flattenPayload={flattenPayload} />
     );
   } else if (Array.isArray(items)) {
     return items.map((item, idx) => (
@@ -151,11 +153,12 @@ function SchemaItems({ schema, schemaName, path }) {
         path={buildPath(path || schemaName, idx)}
         key={idx}
         nameNote='index'
+        flattenPayload={flattenPayload}
       />
     ));
   }
   return (
-    <SchemaPropRow schema={items} path={path} nameNote='single item' />
+    <SchemaPropRow schema={items} path={path} nameNote='single item' flattenPayload={flattenPayload} />
   );
 }
 
@@ -179,7 +182,7 @@ function SchemaAdditionalItems({ schema, path }) {
   }
 
   return (
-    <SchemaPropRow schema={additionalItems} path={path} nameNote='additional items' tryRenderAdditionalNotes={false} />
+    <SchemaPropRow schema={additionalItems} path={path} nameNote='additional items' tryRenderAdditionalNotes={false} flattenPayload={flattenPayload} />
   );
 }
 
@@ -191,6 +194,7 @@ function SchemaPropRow({
   path = '', 
   nameNote = '',
   tryRenderAdditionalNotes = true,
+  flattenPayload
 }) {
   if (
     !schema ||
@@ -249,7 +253,7 @@ function SchemaPropRow({
   return (
     <>
       <TableRow rowRenderer={rowRenderer} entry={schema} />
-      {isCircular === false && nameNote !== 'root' && <SchemaContent schema={schema} schemaName={schemaName} path={path} />}
+      {isCircular === false && nameNote !== 'root' && <SchemaContent schema={schema} schemaName={schemaName} path={path} flattenPayload={flattenPayload} />}
     </>
   );
 }
